@@ -1,0 +1,66 @@
+use anchor_lang::prelude::*;
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token::{
+        mint_to,transfer_checked,Mint,MintTo,Token,TokenAccount,TransferChecked
+    }
+};
+
+use constant_product_curve::ConstantProduct;
+
+
+#[derive(Accounts)]
+pub struct Deposit<'info>{
+    #[account(mut)]
+    pub user:Signer<'info>,
+
+    pub mint_a:Account<'info,Mint>,
+    pub mint_b:Account<'info,Mint>,
+
+    #[account(
+        has_one=mint_a,
+        has_one=mint_b,
+        seeds=[b"config"],
+        bump=config.config_bump
+    )]
+    pub config:Account<'info,Config>,
+
+    #[account(
+        mut,
+        seeds=[b"lp",config.key().as_ref()],
+        bump=config.lp_bump
+    )]
+    pub mint_lp:Account<'info,Mint>,
+
+    #[account(
+        mut,
+        associated_token::mint=mint_a,
+        associated_token::authority=config
+    )]
+    pub vault_a:Account<'info,TokenAccount>,
+
+    #[account(
+        mut,
+        associated_token::mint=mint_b,
+        associated_token::authority=config
+    )]
+    pub vault_b:Account<'info,TokenAccount>,
+
+    #[account(
+        mut,
+        associated_token::mint=mint_a,
+        associated_token::authority=user
+    )]
+    pub user_token_account_a:Account<'info,TokenAccount>,
+
+    #[account(
+        mut,
+        associated_token::mint=mint_b,
+        associated_token::authority=user
+    )]
+    pub user_token_account_b:Account<'info,TokenAccount>,
+
+    pub associated_token_program:Program<'info,AssociatedToken>,
+    pub token_program:Program<'info,Token>,
+    pub system_program:Program<'info,System>
+}
