@@ -65,3 +65,7 @@ pub struct Swap<'info>{
     pub associated_token_program:Program<'info,AssociatedToken>,
     pub token_program:Program<'info,Token>
 }
+
+impl <'info>Swap<'info>{
+    pub fn swap(&mut self, )
+}

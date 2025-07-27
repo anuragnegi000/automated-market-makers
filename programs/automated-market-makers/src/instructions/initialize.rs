@@ -35,6 +35,7 @@ pub struct Initialize<'info>{
 
     #[account(
         init,
+        payer=owner,
         associated_token::mint=mint_a,
         associated_token::authority=config
     )]
@@ -42,7 +43,7 @@ pub struct Initialize<'info>{
 
     #[account(
         init,
-        payer=admin,
+        payer=owner,
         associated_token::mint=mint_b,
         associated_token::authority=config
     )]
@@ -50,4 +51,24 @@ pub struct Initialize<'info>{
     pub token_program:Program<'info,Token>,
     pub associated_token_program:Program<'info,AssociatedToken>,
     pub system_program:Program<'info,System>
+}
+
+
+impl <'info>Initialize<'info>{
+    pub fn initialize(
+        &mut self,
+        fee:u16,
+        authority:Option<Pubkey>,
+        bumps:&InitializeBumps,
+    )->Result<()>{
+        self.config.set_inner(Config{
+            authority,
+            mint_a:self.mint_a.key(),
+            mint_b:self.mint_b.key(),
+            config_bump:bumps.config,
+            lp_bump:bumps.mint_lp,
+            fee
+        });
+        Ok(())
+    }
 }
