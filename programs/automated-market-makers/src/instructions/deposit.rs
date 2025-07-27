@@ -64,3 +64,54 @@ pub struct Deposit<'info>{
     pub token_program:Program<'info,Token>,
     pub system_program:Program<'info,System>
 }
+
+impl <'info>Deposit<'info>{
+    pub fn deposit(&self,amount:u64,max_a:u64,max_b:u64)->Result<()>{
+        let (a,b)=if self.mint_lp.supply==0{
+            (max_a,max_b)
+        }else{
+            let amounts=ConstantProduct::xy_deposit_amounts_from_l(
+                self.vault_a.amount,
+                self.vault_b.amount,
+                self.mint_lp.supply,
+                amount,
+                6
+            ).unwrap();
+            (amounts.x,amounts.y)
+        };
+
+        require!(a<=max_a && b<=max_b,AmmError::SlippageExceeded);
+
+        self.deposit_token_a
+    }
+
+    pub fn deposit_token_a(&mut self,amount:u64)->Result<()>{
+        let cpi_program=self.token_program.to_account_info();
+        let cpi_account=TransferChecked{
+            from:self.user_token_account_a.to_account_info(),
+            to:self.vault_a.to_account_info(),
+            mint:self.mint_a.to_account_info(),
+            authority:self.user.to_account_info()
+        };
+        let cpi_ctx=CpiContext::new(cpi_program,cpi_account);
+        transfer_checked(cpi_ctx,amount,self.mint_a.decimals);
+    }
+    pub fn deposit_token_b(&mut self, amount:u64)->Result<()>{
+        let cpi_program=self.token_program.to_account_info();
+        let cpi_accounts=TransferChecked{
+            from:self.user_token_account_b.to_account_info(),
+            to:self.vault_b.to_account_info(),
+            mint:self.mint_b.to_account_info(),
+            authority:self.user.to_account_info(),
+        };
+    }
+
+    pub fn mint_lp_tokens(&mut self,amount:u64)->Result<()>{
+        let cpi_program=self.token_program.to_account_info();
+        let cpi_accounts=MintTo{
+            mint:self.mint_lp.to_account_info(),
+            to:self.user_token_account_lp.to_account_info(),
+            authority:self.config.to_account_info()
+        };
+    }
+}
