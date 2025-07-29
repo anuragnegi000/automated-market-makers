@@ -53,14 +53,14 @@ pub struct Swap<'info>{
         associated_token::mint=mint_a,
         associated_token::authority=user
     )]
-    pub user_token_account_a:Account<'info,Mint>,
+    pub user_token_account_a:Account<'info,TokenAccount>,
 
     #[account(
         mut,
         associated_token::mint=mint_b,
         associated_token::authority=user
     )]
-    pub user_token_account_b:Account<'info,Mint>,
+    pub user_token_account_b:Account<'info,TokenAccount>,
 
     pub system_program:Program<'info,System>,
     pub associated_token_program:Program<'info,AssociatedToken>,
@@ -69,7 +69,25 @@ pub struct Swap<'info>{
 
 impl <'info>Swap<'info>{
     pub fn swap(&mut self,is_x:bool,amount_in:u64,min_amount_out:u64)->Result<()>{
-        
+        require!(amount_in>0,AmmError::InvalidAmount);
+
+        let mut curve = ConstantProduct::init(
+            self.vault_a.amount,
+            self.vault_b.amount,
+            self.mint_lp.supply,
+            self.config.fee,
+            None
+        ).map_err(|_| AmmError::InvalidAmount)?;
+        let p = if is_x {
+            LiquidityPair::X
+        } else {
+            LiquidityPair::Y
+        };
+        let swap_result = curve.swap(p, amount_in, min_amount_out).map_err(|_| AmmError::InvalidAmount)?;
+        require!(swap_result.deposit!=0,AmmError::InvalidAmount);
+        require!(swap_result.withdraw!=0,AmmError::InvalidAmount);
+        self.deposit_token(is_x, swap_result.deposit)?;
+        self.withdraw_token(!is_x, swap_result.withdraw)?;
         Ok(())
     }
 

@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 #[account]
 #[derive(InitSpace)]
+
 pub struct Config{
     pub authority:Option<Pubkey>,
     pub mint_a:Pubkey,

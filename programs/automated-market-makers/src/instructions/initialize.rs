@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint,Token,TokenAccount}
+    token::{Token, Mint, TokenAccount}
 };
 
 use crate::states::Config;
