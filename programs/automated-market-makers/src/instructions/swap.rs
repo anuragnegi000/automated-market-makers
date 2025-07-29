@@ -67,5 +67,91 @@ pub struct Swap<'info>{
 }
 
 impl <'info>Swap<'info>{
-    pub fn swap(&mut self, )
+    pub fn swap(&mut self,is_x:bool,amount:u64,amount_in:u64,mint_amount_out:u64)->Result<()>{
+        require!(amount_in>0,AmmError::InvalidAmount);
+
+        let(a,b)=match self.mint_lp.supply ==0
+        && self.vault_a.amount==0
+        && self.vault_b.amount==0
+        {
+            true=>(min_x,min_y),
+            false=>{
+                let amounts=ConstantProduct::xy_deposit_amounts_from_l(
+                    self.vault_a.amount,
+                    self.vault_b.amount,
+                    self.mint_lp.supply,
+                    amount,
+                    6
+                ).unwrap();
+                (amounts.a,amounts.b);
+            }
+        };
+        require!(x>=min_a && y>=min_b, AmmError::SlippageExceeded);
+
+        
+    }
+
+    pub fn deposit_token(&mut self,is_a:bool,amount:u64)->Result<()>{
+        let(from,to,mint,decimals)=if is_a{(
+            self.user_token_account_a.to_account_info(),
+            self.vault_a.to_account_info(),
+            self.mint_a.to_account_info(),
+            self.mint_a.decimals
+        )}else{(
+            self.user_token_account_b.to_account_info(),
+            self.vault_b.to_account_info(),
+            self.mint_b.to_account_info(),
+            self.mint_b.decimals
+        )};
+        let cpi_program=self.token_program.to_account_info();
+        let cpi_accounts=TransferChecked{
+            from,
+            to,
+            authority:self.user.to_account_info(),
+            mint
+        };
+        let cpi_context=CpiContext::new(cpi_program,cpi_accounts);
+        transfer_checked(cpi_ctx,amount,decimals);
+    }
+
+    pub fn withdraw_token(&mut self,is_x:bool,amount:u64)->Result<()>{
+        let (from,to,mint,decimals)=if is_x{(
+            self.vault_x.to_account_info(),
+            self.user_token_account_a.to_account_info(),
+            self.mint_a.to_account_info(),
+            self.mint_a.decimals
+        )}else{(
+            self.vault_b.to_account_info(),
+            self.user_token_account_a.to_account_info(),
+            self.mint_b.to_account_info(),
+            self.min_b.to_account_info()
+        )};
+        let cpi_program=self.token_program.to_account_info();
+        let cpi_accounts=TransferChecked{
+            from,
+            to,
+            mint,
+            authority:self.config.to_account_info()
+        };
+        let signer_seeds:&[&[&[u8]]]=&[&[
+            b"config",
+            &[self.config.config_bump],
+        ]];
+        let cpi_context=CpiContext::new_with_signer(cpi_program,cpi_accounts,signer_seeds);
+        transfer_checked(cpi_context,amount,decimals);
+    }
+
+    // pub fn burn_lp(&mut self,amount:u64)->Result<()>{
+    //     let cpi_program=self.token_program.to_account_info();
+    //     let cpi_accounts=Burn{
+    //         mint:self.mint_lp.to_account_info(),
+    //         from:self.user_token_account_lp.to_account_info(),
+    //         authority:self.user.to_account_info()
+    //     };
+
+    //     let cpi_ctx=CpiContext::new(cpi_program,cpi_accounts);
+    //     burn(cpi_ctx,amount,decimals);
+    // }
+
+
 }
