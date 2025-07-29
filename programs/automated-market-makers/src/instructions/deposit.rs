@@ -8,6 +8,9 @@ use anchor_spl::{
 
 use constant_product_curve::ConstantProduct;
 
+use crate::{AmmError, Config};
+
+
 
 #[derive(Accounts)]
 pub struct Deposit<'info>{
@@ -60,13 +63,21 @@ pub struct Deposit<'info>{
     )]
     pub user_token_account_b:Account<'info,TokenAccount>,
 
+    #[account(
+        init_if_needed,
+        payer=user,
+        associated_token::mint=mint_lp,
+        associated_token::authority=user
+    )]
+    pub user_token_account_lp:Account<'info,TokenAccount>,
+
     pub associated_token_program:Program<'info,AssociatedToken>,
     pub token_program:Program<'info,Token>,
     pub system_program:Program<'info,System>
 }
 
 impl <'info>Deposit<'info>{
-    pub fn deposit(&self,amount:u64,max_a:u64,max_b:u64)->Result<()>{
+    pub fn deposit(&mut self,amount:u64,max_a:u64,max_b:u64)->Result<()>{
         let (a,b)=if self.mint_lp.supply==0{
             (max_a,max_b)
         }else{
@@ -82,7 +93,10 @@ impl <'info>Deposit<'info>{
 
         require!(a<=max_a && b<=max_b,AmmError::SlippageExceeded);
 
-        self.deposit_token_a
+        self.deposit_token_a(a)?;
+        self.deposit_token_b(b)?;
+        self.mint_lp_tokens(amount)?;
+        Ok(())
     }
 
     pub fn deposit_token_a(&mut self,amount:u64)->Result<()>{
@@ -95,6 +109,7 @@ impl <'info>Deposit<'info>{
         };
         let cpi_ctx=CpiContext::new(cpi_program,cpi_account);
         transfer_checked(cpi_ctx,amount,self.mint_a.decimals);
+        Ok(())
     }
     pub fn deposit_token_b(&mut self, amount:u64)->Result<()>{
         let cpi_program=self.token_program.to_account_info();
@@ -104,6 +119,9 @@ impl <'info>Deposit<'info>{
             mint:self.mint_b.to_account_info(),
             authority:self.user.to_account_info(),
         };
+        let cpi_ctx=CpiContext::new(cpi_program,cpi_accounts);
+        transfer_checked(cpi_ctx,amount,self.mint_b.decimals);
+        Ok(())
     }
 
     pub fn mint_lp_tokens(&mut self,amount:u64)->Result<()>{
@@ -113,5 +131,12 @@ impl <'info>Deposit<'info>{
             to:self.user_token_account_lp.to_account_info(),
             authority:self.config.to_account_info()
         };
+        let signer_seeds:&[&[&[u8]]]=&[&[
+            b"config",
+            &[self.config.config_bump],
+        ]];
+        let cpi_ctx=CpiContext::new_with_signer(cpi_program,cpi_accounts,signer_seeds);
+        mint_to(cpi_ctx, amount);
+        Ok(())
     }
 }

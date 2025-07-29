@@ -6,6 +6,7 @@ use anchor_spl::{
 
 use crate::states::Config;
 
+
 #[derive(Accounts)]
 pub struct Initialize<'info>{
     #[account(mut)]
@@ -65,6 +66,7 @@ impl <'info>Initialize<'info>{
             authority,
             mint_a:self.mint_a.key(),
             mint_b:self.mint_b.key(),
+            mint_lp:self.mint_lp.key(),
             config_bump:bumps.config,
             lp_bump:bumps.mint_lp,
             fee

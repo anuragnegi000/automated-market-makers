@@ -5,6 +5,10 @@ use anchor_spl::{
 };
 
 
+use constant_product_curve::ConstantProduct;
+use crate::errors::AmmError;
+use crate::states::Config;
+
 #[derive(Accounts)]
 pub struct Withdraw<'info>{
     #[account(mut)]
@@ -66,7 +70,7 @@ pub struct Withdraw<'info>{
 
     pub associated_token_program:Program<'info,AssociatedToken>,
     pub token_program:Program<'info,Token>,
-    pub system_program:Program<'info,Program>
+    pub system_program:Program<'info,System>
 
 }
 
@@ -89,7 +93,7 @@ impl <'info> Withdraw <'info>{
                 (amount.x,amount.y)
             }
         };
-        require!(x>=min_a && y>=min_y,AmmError::SlippageExceeded);
+        require!(a>=min_a && b>=min_b,AmmError::SlippageExceeded);
         self.burn_lp(amount);
         self.withdraw_token_a(a);
         self.withdraw_token_b(b);
@@ -101,9 +105,9 @@ impl <'info> Withdraw <'info>{
         let cpi_accounts=Burn{
             mint:self.mint_lp.to_account_info(),
             from:self.user_token_account_lp.to_account_info(),
-            authority:self.user.to_account_info()
+            authority:self.signer.to_account_info()
         };
-        let signer_seeds=&[&[&[u8]]]=&[&[
+        let signer_seeds:&[&[&[u8]]]=&[&[
             b"config",
             &[self.config.config_bump],
         ]];
@@ -121,6 +125,7 @@ impl <'info> Withdraw <'info>{
             mint:self.mint_a.to_account_info(),
             authority:self.config.to_account_info()
         };
+        let decimals=self.mint_a.decimals;
         let signer_seeds:&[&[&[u8]]]=&[&[
             b"config",
             &[self.config.config_bump]
@@ -137,11 +142,12 @@ impl <'info> Withdraw <'info>{
             mint:self.mint_b.to_account_info(),
             authority:self.config.to_account_info()
         };
+        let decimals=self.mint_b.decimals;
         let signer_seeds:&[&[&[u8]]]=&[&[
             b"config",
-            self.config.config_bump
+        &[self.config.config_bump]
         ]];
-        let cpi_ctx=CpiContext::new_with_signer(cpi_account,cpi_accounts,signer_seeds);
+        let cpi_ctx=CpiContext::new_with_signer(cpi_program,cpi_accounts,signer_seeds);
         transfer_checked(cpi_ctx,amount,decimals);
         Ok(())
     }

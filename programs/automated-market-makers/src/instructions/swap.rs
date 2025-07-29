@@ -7,6 +7,7 @@ use anchor_spl::{
 
 use constant_product_curve::{ConstantProduct,LiquidityPair};
 
+
 use crate::errors::AmmError;
 use crate::states::Config;
 
@@ -28,7 +29,7 @@ pub struct Swap<'info>{
     pub config:Account<'info,Config>,
 
     #[account(
-        seeds=[b"lp",config.key().as_ref],
+        seeds=[b"lp",config.key().as_ref()],
         bump=config.lp_bump
     )]
     pub mint_lp:Account<'info,Mint>,
@@ -38,57 +39,38 @@ pub struct Swap<'info>{
         associated_token::mint=mint_a,
         associated_token::authority=config
     )]
-    pub vault_a:Account<'info,Mint>,
+    pub vault_a:Account<'info,TokenAccount>,
 
     #[account(
         mut,
         associated_token::mint=mint_b,
         associated_token::authority=config
     )]
-    pub vault_b:Account<'info,Mint>,
+    pub vault_b:Account<'info,TokenAccount>,
 
     #[account(
         mut,
         associated_token::mint=mint_a,
-        associated_token::authority=signer
+        associated_token::authority=user
     )]
     pub user_token_account_a:Account<'info,Mint>,
 
     #[account(
         mut,
         associated_token::mint=mint_b,
-        associated_token::authority=signer
+        associated_token::authority=user
     )]
     pub user_token_account_b:Account<'info,Mint>,
 
-    pub system_program:Program<'info,Program>,
+    pub system_program:Program<'info,System>,
     pub associated_token_program:Program<'info,AssociatedToken>,
     pub token_program:Program<'info,Token>
 }
 
 impl <'info>Swap<'info>{
-    pub fn swap(&mut self,is_x:bool,amount:u64,amount_in:u64,mint_amount_out:u64)->Result<()>{
-        require!(amount_in>0,AmmError::InvalidAmount);
-
-        let(a,b)=match self.mint_lp.supply ==0
-        && self.vault_a.amount==0
-        && self.vault_b.amount==0
-        {
-            true=>(min_x,min_y),
-            false=>{
-                let amounts=ConstantProduct::xy_deposit_amounts_from_l(
-                    self.vault_a.amount,
-                    self.vault_b.amount,
-                    self.mint_lp.supply,
-                    amount,
-                    6
-                ).unwrap();
-                (amounts.a,amounts.b);
-            }
-        };
-        require!(x>=min_a && y>=min_b, AmmError::SlippageExceeded);
-
+    pub fn swap(&mut self,is_x:bool,amount_in:u64,min_amount_out:u64)->Result<()>{
         
+        Ok(())
     }
 
     pub fn deposit_token(&mut self,is_a:bool,amount:u64)->Result<()>{
@@ -111,12 +93,13 @@ impl <'info>Swap<'info>{
             mint
         };
         let cpi_context=CpiContext::new(cpi_program,cpi_accounts);
-        transfer_checked(cpi_ctx,amount,decimals);
+        transfer_checked(cpi_context,amount,decimals);
+        Ok(())
     }
 
     pub fn withdraw_token(&mut self,is_x:bool,amount:u64)->Result<()>{
         let (from,to,mint,decimals)=if is_x{(
-            self.vault_x.to_account_info(),
+            self.vault_a.to_account_info(),
             self.user_token_account_a.to_account_info(),
             self.mint_a.to_account_info(),
             self.mint_a.decimals
@@ -124,7 +107,7 @@ impl <'info>Swap<'info>{
             self.vault_b.to_account_info(),
             self.user_token_account_a.to_account_info(),
             self.mint_b.to_account_info(),
-            self.min_b.to_account_info()
+            self.mint_b.decimals
         )};
         let cpi_program=self.token_program.to_account_info();
         let cpi_accounts=TransferChecked{
@@ -139,6 +122,7 @@ impl <'info>Swap<'info>{
         ]];
         let cpi_context=CpiContext::new_with_signer(cpi_program,cpi_accounts,signer_seeds);
         transfer_checked(cpi_context,amount,decimals);
+        Ok(())
     }
 
     // pub fn burn_lp(&mut self,amount:u64)->Result<()>{
