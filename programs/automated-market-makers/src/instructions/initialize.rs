@@ -18,7 +18,7 @@ pub struct Initialize<'info>{
     #[account(
         init,
         payer=owner,
-        seeds=[b"config"],
+        seeds=[b"config",mint_a.key().as_ref(),mint_b.key().as_ref()],
         bump,
         space=Config::INIT_SPACE
     )]

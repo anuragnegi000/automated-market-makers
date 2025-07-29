@@ -21,7 +21,7 @@ pub struct Swap<'info>{
 
     #[account(
         mut,
-        seeds=[b"config"],
+        seeds=[b"config",mint_a.key().as_ref(),mint_b.key().as_ref()],
         bump=config.config_bump,
         has_one=mint_a,
         has_one=mint_b
@@ -134,8 +134,12 @@ impl <'info>Swap<'info>{
             mint,
             authority:self.config.to_account_info()
         };
+        let mint_a_key=self.mint_a.key();
+        let mint_b_key=self.mint_b.key();
         let signer_seeds:&[&[&[u8]]]=&[&[
             b"config",
+            mint_a_key.as_ref(),
+            mint_b_key.as_ref(),
             &[self.config.config_bump],
         ]];
         let cpi_context=CpiContext::new_with_signer(cpi_program,cpi_accounts,signer_seeds);

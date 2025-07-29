@@ -19,7 +19,7 @@ pub struct Withdraw<'info>{
 
     #[account(
         mut,
-        seeds=[b"config"],
+        seeds=[b"config",mint_a.key().as_ref(),mint_b.key().as_ref()],
         bump=config.config_bump,
         has_one=mint_a,
         has_one=mint_b
@@ -107,8 +107,12 @@ impl <'info> Withdraw <'info>{
             from:self.user_token_account_lp.to_account_info(),
             authority:self.signer.to_account_info()
         };
+        let mint_a_key=self.mint_a.key();
+        let mint_b_key=self.mint_b.key();
         let signer_seeds:&[&[&[u8]]]=&[&[
             b"config",
+            mint_a_key.as_ref(),
+            mint_b_key.as_ref(),
             &[self.config.config_bump],
         ]];
 
@@ -126,9 +130,13 @@ impl <'info> Withdraw <'info>{
             authority:self.config.to_account_info()
         };
         let decimals=self.mint_a.decimals;
+        let mint_a_key=self.mint_a.key();
+        let mint_b_key=self.mint_b.key();
         let signer_seeds:&[&[&[u8]]]=&[&[
             b"config",
-            &[self.config.config_bump]
+            mint_a_key.as_ref(),
+            mint_b_key.as_ref(),
+            &[self.config.config_bump],
         ]];
         let cpi_ctx=CpiContext::new_with_signer(cpi_program,cpi_accounts,signer_seeds);
         transfer_checked(cpi_ctx,amount,decimals);
@@ -143,9 +151,13 @@ impl <'info> Withdraw <'info>{
             authority:self.config.to_account_info()
         };
         let decimals=self.mint_b.decimals;
+        let mint_a_key=self.mint_a.key();
+        let mint_b_key=self.mint_b.key();
         let signer_seeds:&[&[&[u8]]]=&[&[
             b"config",
-        &[self.config.config_bump]
+            mint_a_key.as_ref(),
+            mint_b_key.as_ref(),
+            &[self.config.config_bump],
         ]];
         let cpi_ctx=CpiContext::new_with_signer(cpi_program,cpi_accounts,signer_seeds);
         transfer_checked(cpi_ctx,amount,decimals);

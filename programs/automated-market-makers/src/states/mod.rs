@@ -12,3 +12,4 @@ pub struct Config{
     pub config_bump:u8,
     pub lp_bump:u8
 }
+
