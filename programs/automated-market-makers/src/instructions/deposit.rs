@@ -82,10 +82,10 @@ impl <'info>Deposit<'info>{
             (max_a,max_b)
         }else{
             let amounts=ConstantProduct::xy_deposit_amounts_from_l(
-                self.vault_a.amount,
-                self.vault_b.amount,
-                self.mint_lp.supply,
-                amount,
+                self.vault_a.amount, //1st vault
+                self.vault_b.amount, //2nd vault
+                self.mint_lp.supply, // current LP supply
+                amount, //user demand of the LP tokens
                 6
             ).unwrap();
             (amounts.x,amounts.y)

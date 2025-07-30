@@ -19,6 +19,9 @@ describe("automated-market-makers", () => {
   let fee=new BN(1000); // 0.1% fee`
   let configPda:anchor.web3.PublicKey;
   let mint_lp:anchor.web3.PublicKey;
+  let usertokenAccountA:anchor.web3.PublicKey;
+  let usertokenAccountB:anchor.web3.PublicKey;
+  let usertokenAccountLp:anchor.web3.PublicKey;
 
   it("Is initialized!", async () => {
 
@@ -91,6 +94,8 @@ describe("automated-market-makers", () => {
     //   vaultA,
     // )
 
+    
+
     const tx = await program.methods
       .initialize(fee, null)
       .accounts({
@@ -108,4 +113,55 @@ describe("automated-market-makers", () => {
       .rpc();
     console.log("Your transaction signature", tx);
   });
+  it("Deposit Initial Liquidity", async () => {
+    usertokenAccountA=await createAssociatedTokenAccount(
+      program.provider.connection,
+      signer,
+      mintA,
+      signer.publicKey,
+    )
+    usertokenAccountB=await createAssociatedTokenAccount(
+      program.provider.connection,
+      signer,
+      mintB,
+      signer.publicKey,
+    )
+    usertokenAccountLp=await createAssociatedTokenAccount(
+      program.provider.connection,
+      signer,
+      mint_lp,
+      signer.publicKey
+    )
+    let minted_to_a=await mintTo(
+      program.provider.connection,
+      signer,
+      mintA,
+      usertokenAccountA,
+      signer.publicKey,
+      10000000000
+    )
+    console.log("Minted to A:", minted_to_a);
+    let minted_to_b=await mintTo(
+      program.provider.connection,
+      signer,
+      mintB,
+      usertokenAccountB,
+      signer.publicKey,
+      10000000000
+    )
+    console.log("Minted to B:", minted_to_b);
+    console.log("User Token Account A:", usertokenAccountA.toBase58());
+    console.log("User Token Account B:", usertokenAccountB.toBase58());
+    const tx=await program.methods.deposit(new BN(1000000),new BN(10000000),new BN(40000000)).accounts({
+      user: signer.publicKey,
+      mintA: mintA,
+      mintB:mintB,
+      config:configPda,
+      vaultA:vaultA,
+      vaultB:vaultB,
+      usertokenAccountA:usertokenAccountA,
+      usertokenAccountB:usertokenAccountB,
+      usertokenAccountLp:usertokenAccountLp
+    }).signers([signer]).rpc();
+  })
 });
