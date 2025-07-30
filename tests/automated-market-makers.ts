@@ -17,6 +17,8 @@ describe("automated-market-makers", () => {
   let vaultA:anchor.web3.PublicKey;
   let vaultB:anchor.web3.PublicKey;
   let fee=new BN(1000); // 0.1% fee`
+  let configPda:anchor.web3.PublicKey;
+  let mint_lp:anchor.web3.PublicKey;
 
   it("Is initialized!", async () => {
 
@@ -57,26 +59,28 @@ describe("automated-market-makers", () => {
       6
     )
 
-    const configPda=await anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("config"),mintA.toBuffer(),mintB.toBuffer()],program.programId
-    )
-    console.log("Config PDA:", configPda[0].toString());
-   
-    const mint_lp=await anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("lp"),configPda[0].toBuffer()],program.programId
-    )
-    console.log("MInt LP",mint_lp[0].toBase58());
+     configPda = (await anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("config"), mintA.toBuffer(), mintB.toBuffer()], 
+  program.programId
+))[0];
+    console.log("Config PDA:", configPda.toString());
+
+    mint_lp=(await anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("lp"),configPda.toBuffer()],program.programId
+    ))[0];
+    
+    console.log("MInt LP",mint_lp.toBase58());
     vaultA=await getAssociatedTokenAddress(
       mintA,
-      configPda[0],
+      configPda,
       true
     )
     console.log("Vault A:", vaultA.toBase58());
   
     vaultB=await getAssociatedTokenAddress(
       mintB,
-      configPda[0],
-      true
+      configPda,
+      true  
     )
     console.log("Vault B:",vaultB.toBase58())
 
