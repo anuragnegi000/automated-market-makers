@@ -152,7 +152,7 @@ describe("automated-market-makers", () => {
     console.log("Minted to B:", minted_to_b);
     console.log("User Token Account A:", usertokenAccountA.toBase58());
     console.log("User Token Account B:", usertokenAccountB.toBase58());
-    const tx=await program.methods.deposit(new BN(1000000),new BN(10000000),new BN(40000000)).accounts({
+    const tx=await program.methods.deposit(new BN(10000000),new BN(10000000),new BN(40000000)).accounts({
       user: signer.publicKey,
       mintA: mintA,
       mintB:mintB,
@@ -163,5 +163,34 @@ describe("automated-market-makers", () => {
       usertokenAccountB:usertokenAccountB,
       usertokenAccountLp:usertokenAccountLp
     }).signers([signer]).rpc();
+
+    const vaultBalanceA=await program.provider.connection.getTokenAccountBalance(vaultA);
+    console.log("Vault A Balance:", vaultBalanceA.value.uiAmount);
+
+    const vaultBalanceB=await program.provider.connection.getTokenAccountBalance(vaultB);
+    console.log("Vault B Balance:", vaultBalanceB.value.uiAmount);
+  
+    const balance=await program.provider.connection.getTokenAccountBalance(usertokenAccountLp);
+    console.log("User LP Token Account Balance:", balance.value.uiAmount);
+    console.log("Deposit transaction signature:", tx);
+  
+  })
+  it("Swap",async()=>{
+    console.log("Swap started");
+    const tx=await program.methods.swap(false,new BN(100),new BN(0)).accounts({
+      user:signer.publicKey,
+      mintA:mintA,
+      mintB:mintB,
+      config:configPda,
+      mint_lp:mint_lp,
+      vaultA:vaultA,
+      vaultB:vaultB,
+      usertokenAccountA:usertokenAccountA,
+      usertokenAccountB:usertokenAccountB,
+      usertokenAccountLp:usertokenAccountLp
+    }).signers([signer]).rpc();
+    console.log("Swap transaction signature:", tx);
+    const usertokenAccountBBalance=await program.provider.connection.getTokenAccountBalance(usertokenAccountB);
+    console.log("User Token Account B Balance after swap:", usertokenAccountBBalance.value.uiAmount);
   })
 });
