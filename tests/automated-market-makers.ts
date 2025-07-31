@@ -138,7 +138,7 @@ describe("automated-market-makers", () => {
       mintA,
       usertokenAccountA,
       signer.publicKey,
-      10000000000
+      100000000
     )
     console.log("Minted to A:", minted_to_a);
     let minted_to_b=await mintTo(
@@ -147,7 +147,7 @@ describe("automated-market-makers", () => {
       mintB,
       usertokenAccountB,
       signer.publicKey,
-      10000000000
+      100000000
     )
     console.log("Minted to B:", minted_to_b);
     console.log("User Token Account A:", usertokenAccountA.toBase58());
@@ -177,7 +177,12 @@ describe("automated-market-makers", () => {
   })
   it("Swap",async()=>{
     console.log("Swap started");
-    const tx=await program.methods.swap(false,new BN(100),new BN(0)).accounts({
+    
+    const usertokenAccountABefore=await program.provider.connection.getTokenAccountBalance(usertokenAccountA);
+    console.log("User Token Account A Balance before swap:", usertokenAccountABefore.value.uiAmount);
+    const usertokenAccountBBefore=await program.provider.connection.getTokenAccountBalance(usertokenAccountB);
+    console.log("User Token Account B Balance before swap:", usertokenAccountBBefore.value.uiAmount);
+    const tx=await program.methods.swap(false,new BN(9000000),new BN(0)).accounts({
       user:signer.publicKey,
       mintA:mintA,
       mintB:mintB,
@@ -190,7 +195,32 @@ describe("automated-market-makers", () => {
       usertokenAccountLp:usertokenAccountLp
     }).signers([signer]).rpc();
     console.log("Swap transaction signature:", tx);
+    const vaultAbal=await program.provider.connection.getTokenAccountBalance(vaultA);
+    console.log("Vault A Balance After swap:", vaultAbal.value.uiAmount);
+    const vaultBbal=await program.provider.connection.getTokenAccountBalance(vaultB);
+    console.log("Vault B Balance After swap:", vaultBbal.value.uiAmount);
+    const usertokenAccountAbalance=await program.provider.connection.getTokenAccountBalance(usertokenAccountA);
+    console.log("User Token Account A Balance after swap:", usertokenAccountAbalance.value.uiAmount);
     const usertokenAccountBBalance=await program.provider.connection.getTokenAccountBalance(usertokenAccountB);
     console.log("User Token Account B Balance after swap:", usertokenAccountBBalance.value.uiAmount);
+  })
+  it("Withdraw",async()=>{
+    console.log("Withdraw started");
+    const tx=await program.methods.withdraw(new BN(10000000),new BN(8100000),new BN(40000000)).accounts({
+      signer:signer.publicKey,
+      mintA:mintA,
+      mintB:mintB,
+      config:configPda,
+      vaultA:vaultA,
+      vaultB:vaultB,
+      usertokenAccountA:usertokenAccountA,
+      usertokenAccountB:usertokenAccountB,
+      usertokenAccountLp:usertokenAccountLp
+    }).signers([signer]).rpc();
+    console.log("Withdraw transaction signature:", tx);
+    const vaultAbal=await program.provider.connection.getTokenAccountBalance(vaultA);
+    console.log("Vault A Balance After withdraw:", vaultAbal.value.uiAmount);
+    const vaultBbal=await program.provider.connection.getTokenAccountBalance(vaultB);
+    console.log("Vault B Balance After withdraw:", vaultBbal.value.uiAmount);
   })
 });
